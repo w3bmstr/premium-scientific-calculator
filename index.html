@@ -20,6 +20,11 @@
   <div class="app" id="app" role="application" aria-label="Lumina Calculator">
     <!-- Ambient glow -->
     <div class="ambient"></div>
+    <div class="install-banner" id="installBanner" hidden>
+      <span>Install Lumina for offline use</span>
+      <button type="button" id="installBtn">Install</button>
+      <button type="button" id="installDismiss" class="text-btn">Not now</button>
+    </div>
 
     <!-- Header -->
     <header class="header">
@@ -49,6 +54,7 @@
       <button class="mode-tab" data-mode="graph">Graph</button>
       <button class="mode-tab" data-mode="convert">Convert</button>
       <button class="mode-tab" data-mode="formulas">Formulas</button>
+      <button class="mode-tab" data-mode="tools">Tools</button>
     </nav>
 
     <!-- Display -->
@@ -58,7 +64,10 @@
         <button type="button" class="notation-badge" id="notationMode" style="color:#c45a12;background:#141416;border:1px solid #3d2a18" title="Toggle notation">NORM</button>
         <span class="memory-indicator" id="memoryIndicator" hidden>M</span>
       </div>
-      <div class="expression" id="expression" contenteditable="true" spellcheck="false" inputmode="decimal" aria-label="Expression"></div>
+      <div class="expr-wrap">
+        <div class="expression" id="expression" contenteditable="true" spellcheck="false" inputmode="text" aria-label="Expression editor" data-placeholder="Enter expression…"></div>
+        <div class="error-line" id="errorLine" hidden></div>
+      </div>
       <div class="result" id="result" title="Tap to copy" role="status" aria-live="polite">0</div>
     </section>
 
@@ -94,6 +103,9 @@
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="rand">rnd</button>
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="frac">a/b</button>
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="eng">ENG</button>
+          <button class="key fn" data-fn="diff" style="color:#c45a12;background:#0e0e10;font-weight:700">d/dx</button>
+          <button class="key fn" data-fn="simp" style="color:#c45a12;background:#0e0e10;font-weight:700">simp</button>
+          <button class="key fn" data-const="i" style="color:#c45a12;background:#0e0e10;font-weight:700">i</button>
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="c">c</button>
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="G">G</button>
           <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="h">h</button>
@@ -189,7 +201,10 @@
             <input type="number" id="loan-years" placeholder="5" step="any">
           </div>
           <button class="key equals fin-calc" data-fin-calc="loan">Calculate</button>
+          <button class="key util" id="loan-amort" type="button">Amortization</button>
+          <button class="key util" id="loan-pdf" type="button">Print / PDF</button>
           <div class="fin-result" id="loan-result"></div>
+          <div class="amort-wrap" id="loan-amort-table" hidden></div>
         </div>
 
         <div class="fin-form" id="fin-mortgage">
@@ -210,7 +225,11 @@
             <input type="number" id="mtg-years" placeholder="30" step="any">
           </div>
           <button class="key equals fin-calc" data-fin-calc="mortgage">Calculate</button>
+          <button class="key util" id="mtg-amort" type="button">Amortization</button>
+          <button class="key util" id="mtg-pdf" type="button">Print / PDF</button>
           <div class="fin-result" id="mtg-result"></div>
+          <div class="amort-wrap" id="mtg-amort-table" hidden></div>
+          <canvas id="mtg-chart" height="120" hidden></canvas>
         </div>
 
         <div class="fin-form" id="fin-roi">
@@ -322,6 +341,8 @@
           <button class="key util" id="graph-reset">Reset</button>
           <button class="key util" id="graph-save">Save</button>
           <button class="key util" id="graph-roots" title="Find roots">Roots</button>
+          <button class="key util" id="graph-extrema" title="Min/Max">Extrema</button>
+          <button class="key util" id="graph-polar" title="Polar mode">Polar</button>
         </div>
       </div>
 
@@ -373,6 +394,30 @@
         </div>
       </div>
 
+
+      <div class="panel" id="panel-tools">
+        <div class="tool-search-row">
+          <input type="search" id="toolSearch" placeholder="Search tools…" autocomplete="off">
+          <span class="tool-count" id="toolCount"></span>
+        </div>
+        <div class="formula-cats" id="toolCats"></div>
+        <div class="formula-list" id="toolList"></div>
+        <div class="formula-run glass" id="toolRun" hidden>
+          <div class="tool-run-head">
+            <div class="formula-title" id="toolTitle"></div>
+            <button type="button" class="icon-btn" id="toolFavBtn" title="Favorite">☆</button>
+          </div>
+          <div class="formula-fields" id="toolFields"></div>
+          <div class="tool-actions">
+            <button class="key equals fin-calc" id="toolCalc" type="button">Calculate</button>
+            <button class="key util" id="toolCopy" type="button">Copy</button>
+            <button class="key util" id="toolToCalc" type="button">→ Calc</button>
+          </div>
+          <div class="fin-result" id="toolResult"></div>
+        </div>
+        <div class="tool-quick" id="toolQuick"></div>
+      </div>
+
     <!-- History drawer -->
     <aside class="history-drawer" id="historyDrawer">
       <div class="history-header">
@@ -409,6 +454,9 @@
         </button>
         <button class="menu-item" data-menu-mode="formulas">
           <span class="menu-icon">∑</span> Formulas
+        </button>
+        <button class="menu-item" data-menu-mode="tools">
+          <span class="menu-icon">▦</span> Tools Catalog
         </button>
       </nav>
       <div class="menu-divider"></div>
@@ -468,6 +516,23 @@
         <button class="menu-item" id="menuExportCsv">
           <span class="menu-icon">↓</span> Export History (CSV)
         </button>
+        <button class="menu-item" id="menuBackup">
+          <span class="menu-icon">☁</span> Backup / Sync file
+        </button>
+        <button class="menu-item" id="menuRestore">
+          <span class="menu-icon">↑</span> Restore backup
+        </button>
+        <button class="menu-item" id="menuInstall">
+          <span class="menu-icon">↓</span> Install app
+        </button>
+        <button class="menu-item" id="menuVoice">
+          <span class="menu-icon">🎤</span> Voice input
+        </button>
+        <button class="menu-item" id="menuOcr">
+          <span class="menu-icon">📷</span> Image OCR
+        </button>
+        <input type="file" id="ocrFile" accept="image/*" hidden>
+        <input type="file" id="restoreFile" accept="application/json" hidden>
         <button class="menu-item" id="menuClearMem">
           <span class="menu-icon">✕</span> Clear Memory
         </button>
@@ -490,15 +555,11 @@
 
   <script src="storage.js"></script>
   <script src="formulas.js"></script>
+  <script src="tools.js"></script>
   <script src="scientific.js"></script>
   <script src="financial.js"></script>
   <script src="graph.js"></script>
   <script src="calculator.js"></script>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
-  </script>
 </body>
 </html>

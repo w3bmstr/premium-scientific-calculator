@@ -1478,3 +1478,123 @@ button.notation-badge:hover,
   background: #1c1c20 !important;
   border-color: #c45a12 !important;
 }
+
+/* Advanced UI */
+.expr-wrap { width: 100%; text-align: right; }
+.error-line {
+  font-size: 11px;
+  color: #f87171;
+  margin-top: 4px;
+  text-align: right;
+  font-family: var(--mono);
+}
+.expression[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.amort-wrap {
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-top: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+.amort-wrap table { width: 100%; border-collapse: collapse; }
+.amort-wrap th, .amort-wrap td {
+  padding: 4px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--glass-border);
+}
+.amort-wrap th:first-child, .amort-wrap td:first-child { text-align: left; }
+.install-banner {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #141416;
+  border: 1px solid #3d2a18;
+  color: #e07020;
+  font-size: 13px;
+}
+.install-banner button {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #c45a12;
+  color: #fff;
+}
+.install-banner .text-btn {
+  background: transparent;
+  color: var(--text-muted);
+}
+#mtg-chart { width: 100%; margin-top: 8px; border-radius: 8px; }
+
+#toolList { max-height: 45vh; }
+#toolCats { margin-bottom: 8px; }
+
+.tool-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.tool-search-row input {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--key);
+  color: var(--text);
+  outline: none;
+}
+.tool-search-row input:focus { border-color: #c45a12; }
+.tool-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+#toolList { max-height: 42vh; }
+
+.tool-run-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tool-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.tool-actions .key { flex: 1; min-width: 70px; }
+.tool-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tool-chip {
+  border: 1px solid var(--glass-border);
+  background: var(--key);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.tool-chip:hover { color: #e07020; border-color: #c45a12; }
+.tool-chip.fav { color: #e07020; }
+.formula-card.fav .fname::before { content: "★ "; color: #c45a12; }

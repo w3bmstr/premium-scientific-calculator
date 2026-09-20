@@ -61,6 +61,12 @@
     setupFeedback();
     setupExpressionEditor();
     refreshCurrencyRates();
+    setupAmortization();
+    setupPWA();
+    setupVoice();
+    setupOCR();
+    setupBackup();
+    setupToolsCatalog();
     Graph.init('graph-canvas');
     toggleScientificKeys(false);
   }
@@ -208,7 +214,15 @@
     // Constants
     $$('[data-const]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const c = btn.dataset.const === 'pi' ? Math.PI : Math.E;
+        const k = btn.dataset.const;
+        if (k === 'i') {
+          if (lastWasEquals || expression === '') expression = 'i';
+          else expression += 'i';
+          lastWasEquals = false;
+          updateDisplay();
+          return;
+        }
+        const c = k === 'pi' ? Math.PI : Math.E;
         if (lastWasEquals || expression === '') {
           expression = Sci.format(c);
           result = c;
@@ -372,23 +386,37 @@
     pushUndo();
     const detailed = Sci.evalDetailed ? Sci.evalDetailed(expression) : { value: Sci.eval(expression), display: null };
     const v = detailed.value;
-    if (!isFinite(v)) {
+    if (detailed.error || (!isFinite(v) && !detailed.display)) {
       resultDisplay = null;
       resultEl.textContent = 'Error';
       resultEl.classList.add('error');
-      showToast('Could not evaluate expression');
+      const el = document.getElementById('errorLine');
+      if (el) {
+        el.hidden = false;
+        el.textContent = detailed.error || Sci.lastError || 'Could not evaluate';
+      }
+      showToast(detailed.error || 'Could not evaluate');
       return;
     }
     resultEl.classList.remove('error');
+    const el = document.getElementById('errorLine');
+    if (el) { el.hidden = true; el.textContent = ''; }
     const histResult = detailed.display || Sci.format(v);
     Storage.addHistory(expression, histResult);
     renderHistory();
-    result = v;
-    ans = v;
-    window.__luminaAns = v;
-    Storage.setAns(v);
-    resultDisplay = detailed.display && detailed.display !== Sci.format(v) ? detailed.display : null;
-    expression = Sci.format(v);
+    result = isFinite(v) ? v : 0;
+    if (isFinite(v)) {
+      ans = v;
+      window.__luminaAns = v;
+      Storage.setAns(v);
+    }
+    resultDisplay = detailed.display || null;
+    // Keep complex/matrix expression result visible; for numbers put value in expression
+    if (detailed.matrix || detailed.complex) {
+      expression = detailed.display;
+    } else {
+      expression = Sci.format(v, notationMode);
+    }
     lastWasEquals = true;
     updateDisplay();
   }
@@ -432,6 +460,28 @@
         updateDisplay();
         showToast('Fraction mode');
         return;
+      case 'diff': {
+        const src = expression || 'x^2';
+        const d = Sci.derivative(src.replace(/=.*/, '').trim() || 'x^2');
+        if (!d) { showToast(Sci.lastError || 'Derivative failed'); return; }
+        expression = d;
+        resultDisplay = d;
+        lastWasEquals = false;
+        updateDisplay();
+        showToast('d/dx → ' + d);
+        return;
+      }
+      case 'simp': {
+        const src = expression || 'x';
+        const s = Sci.simplify(src);
+        if (!s) { showToast(Sci.lastError || 'Simplify failed'); return; }
+        expression = s;
+        resultDisplay = s;
+        lastWasEquals = false;
+        updateDisplay();
+        showToast('Simplified');
+        return;
+      }
       case 'eng':
         notationMode = notationMode === 'ENG' ? 'NORM' : 'ENG';
         localStorage.setItem('lumina_notation', notationMode);
@@ -674,6 +724,13 @@
     $('#graph-save').addEventListener('click', () => Graph.save());
     const rootsBtn = $('#graph-roots');
     if (rootsBtn) rootsBtn.addEventListener('click', () => Graph.showRoots());
+    const exBtn = $('#graph-extrema');
+    if (exBtn) exBtn.addEventListener('click', () => Graph.showExtrema());
+    const polBtn = $('#graph-polar');
+    if (polBtn) polBtn.addEventListener('click', () => {
+      Graph.setMode(Graph.mode === 'polar' ? 'cartesian' : 'polar');
+      showToast(Graph.mode === 'polar' ? 'Polar mode' : 'Cartesian mode');
+    });
     $('#graph-fn').addEventListener('keydown', (e) => { if (e.key === 'Enter') plotAll(); });
   }
 
@@ -1264,6 +1321,457 @@
       }
     });
   }
+
+
+  // ── Amortization + PDF ──
+  let lastAmort = null;
+  function setupAmortization() {
+    const mtgA = $('#mtg-amort'), mtgP = $('#mtg-pdf');
+    const loanA = $('#loan-amort'), loanP = $('#loan-pdf');
+    if (mtgA) mtgA.addEventListener('click', () => {
+      const r = Finance.mortgage($('#mtg-price').value, $('#mtg-down').value, $('#mtg-rate').value, $('#mtg-years').value);
+      if (!r) return showToast('Invalid mortgage inputs');
+      lastAmort = Finance.amortization(r.loanAmount, $('#mtg-rate').value, $('#mtg-years').value);
+      renderAmortTable('mtg-amort-table', lastAmort);
+      plotAmortChart(lastAmort);
+      showToast('Amortization ready');
+    });
+    if (mtgP) mtgP.addEventListener('click', () => {
+      if (!lastAmort) {
+        const r = Finance.mortgage($('#mtg-price').value, $('#mtg-down').value, $('#mtg-rate').value, $('#mtg-years').value);
+        if (r) lastAmort = Finance.amortization(r.loanAmount, $('#mtg-rate').value, $('#mtg-years').value);
+      }
+      if (!lastAmort) return showToast('Calculate amortization first');
+      const w = window.open('', '_blank');
+      w.document.write(Finance.amortizationReportHTML(lastAmort, 'Mortgage Amortization'));
+      w.document.close();
+    });
+    if (loanA) loanA.addEventListener('click', () => {
+      lastAmort = Finance.amortization($('#loan-amount').value, $('#loan-rate').value, $('#loan-years').value);
+      if (!lastAmort) return showToast('Invalid loan inputs');
+      renderAmortTable('loan-amort-table', lastAmort);
+      showToast('Amortization ready');
+    });
+    if (loanP) loanP.addEventListener('click', () => {
+      if (!lastAmort) lastAmort = Finance.amortization($('#loan-amount').value, $('#loan-rate').value, $('#loan-years').value);
+      if (!lastAmort) return showToast('Calculate amortization first');
+      const w = window.open('', '_blank');
+      w.document.write(Finance.amortizationReportHTML(lastAmort, 'Loan Amortization'));
+      w.document.close();
+    });
+  }
+  function renderAmortTable(id, schedule) {
+    const el = document.getElementById(id);
+    if (!el || !schedule) return;
+    el.hidden = false;
+    const head = '<table><thead><tr><th>#</th><th>Pay</th><th>Prin</th><th>Int</th><th>Bal</th></tr></thead><tbody>';
+    const body = schedule.rows.slice(0, 60).map(r =>
+      `<tr><td>${r.month}</td><td>${Finance.fmt(r.payment)}</td><td>${Finance.fmt(r.principal)}</td><td>${Finance.fmt(r.interest)}</td><td>${Finance.fmt(r.balance)}</td></tr>`
+    ).join('');
+    el.innerHTML = head + body + '</tbody></table>' +
+      (schedule.rows.length > 60 ? '<div style="padding:6px;opacity:.7">Showing first 60 of ' + schedule.rows.length + ' months</div>' : '');
+  }
+  function plotAmortChart(schedule) {
+    const canvas = document.getElementById('mtg-chart');
+    if (!canvas || !schedule || typeof Chart === 'undefined') return;
+    canvas.hidden = false;
+    const labels = schedule.rows.filter((_, i) => i % Math.ceil(schedule.rows.length / 40) === 0).map(r => r.month);
+    const bals = schedule.rows.filter((_, i) => i % Math.ceil(schedule.rows.length / 40) === 0).map(r => r.balance);
+    if (canvas._chart) canvas._chart.destroy();
+    canvas._chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Balance', data: bals, borderColor: '#c45a12', borderWidth: 2, pointRadius: 0, tension: 0.2 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8a8780', maxTicksLimit: 8 } }, y: { ticks: { color: '#8a8780' } } } }
+    });
+  }
+
+  // ── PWA install ──
+  let deferredPrompt = null;
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true
+      || document.referrer.includes('android-app://');
+  }
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  function isSecureContextForPWA() {
+    return location.protocol === 'https:' || location.hostname === 'localhost'
+      || location.hostname === '127.0.0.1' || location.hostname === '[::1]';
+  }
+  function showInstallHelp() {
+    let msg = '';
+    if (isStandalone()) {
+      msg = 'Lumina is already installed — open it from your home screen.';
+    } else if (!isSecureContextForPWA()) {
+      msg = 'Install needs HTTPS or localhost. Push to GitHub Pages, or run: npx serve .';
+    } else if (isIOS()) {
+      msg = 'iPhone/iPad: Safari → Share → Add to Home Screen';
+    } else if (deferredPrompt) {
+      msg = 'Tap Install when the browser prompt appears.';
+    } else {
+      msg = 'Chrome/Edge: menu (⋮) → Cast, save, and share → Install app. Or address bar install icon.';
+    }
+    showToast(msg);
+    // Longer help in banner
+    const ban = $('#installBanner');
+    if (ban) {
+      ban.hidden = false;
+      const span = ban.querySelector('span');
+      if (span) span.textContent = msg;
+    }
+  }
+  function setupPWA() {
+    // Register SW early with correct scope
+    if ('serviceWorker' in navigator) {
+      const swUrl = new URL('sw.js', window.location.href).href;
+      navigator.serviceWorker.register(swUrl).then((reg) => {
+        console.info('Lumina SW registered', reg.scope);
+      }).catch((err) => console.warn('SW register failed', err));
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const ban = $('#installBanner');
+      if (ban && !localStorage.getItem('lumina_install_dismiss')) {
+        ban.hidden = false;
+        const span = ban.querySelector('span');
+        if (span) span.textContent = 'Install Lumina for offline use';
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      const ban = $('#installBanner');
+      if (ban) ban.hidden = true;
+      showToast('Installed — launch from your home screen');
+    });
+
+    if (isStandalone()) {
+      const ban = $('#installBanner');
+      if (ban) ban.hidden = true;
+    }
+
+    const doInstall = async () => {
+      if (isStandalone()) {
+        showToast('Already running as installed app');
+        return;
+      }
+      if (!isSecureContextForPWA()) {
+        showInstallHelp();
+        return;
+      }
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        const ban = $('#installBanner');
+        if (ban) ban.hidden = true;
+        if (choice && choice.outcome === 'accepted') showToast('Installing…');
+        else showToast('Install dismissed');
+        return;
+      }
+      // No native prompt available — guide the user
+      showInstallHelp();
+    };
+
+    const btn = $('#installBtn'), dis = $('#installDismiss'), menu = $('#menuInstall');
+    if (btn) btn.addEventListener('click', doInstall);
+    if (menu) menu.addEventListener('click', doInstall);
+    if (dis) dis.addEventListener('click', () => {
+      localStorage.setItem('lumina_install_dismiss', '1');
+      const ban = $('#installBanner');
+      if (ban) ban.hidden = true;
+    });
+  }
+
+  // ── Voice ──
+  function setupVoice() {
+    const btn = $('#menuVoice');
+    if (!btn) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      btn.addEventListener('click', () => showToast('Voice not supported in this browser'));
+      return;
+    }
+    btn.addEventListener('click', () => {
+      const rec = new SR();
+      rec.lang = 'en-US';
+      rec.onresult = (ev) => {
+        let t = ev.results[0][0].transcript.toLowerCase()
+          .replace(/plus/g, '+').replace(/minus/g, '-')
+          .replace(/times|multiplied by/g, '*').replace(/divided by|over/g, '/')
+          .replace(/squared/g, '^2').replace(/pi/g, 'pi')
+          .replace(/\s+/g, '');
+        expression = t;
+        lastWasEquals = false;
+        updateDisplay();
+        closeAllDrawers();
+        showToast('Heard: ' + t);
+      };
+      rec.onerror = () => showToast('Voice error');
+      rec.start();
+      showToast('Listening…');
+      closeAllDrawers();
+    });
+  }
+
+  // ── OCR (Tesseract CDN on demand) ──
+  function setupOCR() {
+    const btn = $('#menuOcr'), file = $('#ocrFile');
+    if (!btn || !file) return;
+    btn.addEventListener('click', () => file.click());
+    file.addEventListener('change', async () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      showToast('Loading OCR…');
+      try {
+        if (!window.Tesseract) {
+          await new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+        }
+        const { data: { text } } = await Tesseract.recognize(f, 'eng');
+        const cleaned = text.replace(/[^\d+\-*/^().eE\pi\s]/g, '').trim();
+        expression = cleaned.replace(/\s+/g, '');
+        lastWasEquals = false;
+        updateDisplay();
+        showToast('OCR: ' + expression.slice(0, 40));
+      } catch (e) {
+        showToast('OCR failed');
+      }
+      file.value = '';
+      closeAllDrawers();
+    });
+  }
+
+  // ── Backup / restore (file-based "sync") ──
+  function setupBackup() {
+    const b = $('#menuBackup'), r = $('#menuRestore'), rf = $('#restoreFile');
+    if (b) b.addEventListener('click', () => {
+      const data = Storage.exportAll();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lumina-backup-' + Date.now() + '.json';
+      a.click();
+      showToast('Backup downloaded');
+      closeAllDrawers();
+    });
+    if (r && rf) {
+      r.addEventListener('click', () => rf.click());
+      rf.addEventListener('change', async () => {
+        const f = rf.files && rf.files[0];
+        if (!f) return;
+        try {
+          const data = JSON.parse(await f.text());
+          Storage.importAll(data);
+          memory = Storage.getMemory();
+          ans = Storage.getAns();
+          window.__luminaAns = ans;
+          applySkin(Storage.getSkin());
+          renderHistory();
+          updateMemoryIndicator();
+          showToast('Backup restored');
+        } catch {
+          showToast('Invalid backup file');
+        }
+        rf.value = '';
+        closeAllDrawers();
+      });
+    }
+  }
+
+
+  // ── Tools catalog ──
+  let toolCat = 'all';
+  let toolQuery = '';
+  let activeTool = null;
+  let lastToolOut = '';
+  const FAV_KEY = 'lumina_tool_favs';
+  const RECENT_KEY = 'lumina_tool_recent';
+  function getFavs() {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch { return []; }
+  }
+  function setFavs(a) { localStorage.setItem(FAV_KEY, JSON.stringify(a)); }
+  function getRecent() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+  }
+  function pushRecent(id) {
+    let r = getRecent().filter(x => x !== id);
+    r.unshift(id);
+    if (r.length > 12) r.length = 12;
+    localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+  }
+  function setupToolsCatalog() {
+    if (typeof Tools === 'undefined') return;
+    const cats = $('#toolCats');
+    if (!cats) return;
+    const allCats = [
+      { id: 'all', name: 'All' },
+      { id: 'favs', name: '★ Favs' },
+      { id: 'recent', name: 'Recent' },
+    ].concat(Tools.categories);
+    cats.innerHTML = allCats.map((c, i) =>
+      `<button type="button" class="conv-tab${i === 0 ? ' active' : ''}" data-tcat="${c.id}">${c.name}</button>`
+    ).join('');
+    cats.querySelectorAll('[data-tcat]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cats.querySelectorAll('.conv-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        toolCat = btn.dataset.tcat;
+        renderToolList();
+        const run = $('#toolRun');
+        if (run) run.hidden = true;
+      });
+    });
+    const search = $('#toolSearch');
+    if (search) {
+      search.addEventListener('input', () => {
+        toolQuery = search.value.trim().toLowerCase();
+        renderToolList();
+      });
+    }
+    const calc = $('#toolCalc');
+    if (calc) calc.addEventListener('click', runActiveTool);
+    const copyBtn = $('#toolCopy');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+      if (!lastToolOut) return showToast('Nothing to copy');
+      navigator.clipboard.writeText(lastToolOut).then(() => showToast('Copied')).catch(() => showToast('Copy failed'));
+    });
+    const toCalc = $('#toolToCalc');
+    if (toCalc) toCalc.addEventListener('click', sendToolToCalc);
+    const favBtn = $('#toolFavBtn');
+    if (favBtn) favBtn.addEventListener('click', toggleToolFav);
+    // Enter in tool fields runs calc
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && currentMode === 'tools' && document.activeElement && document.activeElement.dataset && document.activeElement.dataset.tk != null) {
+        e.preventDefault();
+        runActiveTool();
+      }
+      if (e.key === '/' && currentMode === 'tools' && document.activeElement?.id !== 'toolSearch' && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        $('#toolSearch')?.focus();
+      }
+    });
+    renderToolList();
+    renderToolQuick();
+  }
+  function renderToolQuick() {
+    const el = $('#toolQuick');
+    if (!el) return;
+    const favs = getFavs().slice(0, 6);
+    const recent = getRecent().filter(id => !favs.includes(id)).slice(0, 6);
+    const ids = favs.concat(recent);
+    el.innerHTML = ids.map(id => {
+      const t = Tools.get(id);
+      if (!t) return '';
+      const isFav = favs.includes(id);
+      return `<button type="button" class="tool-chip${isFav ? ' fav' : ''}" data-qid="${id}">${isFav ? '★ ' : ''}${t.name}</button>`;
+    }).join('');
+    el.querySelectorAll('[data-qid]').forEach(b => b.addEventListener('click', () => openTool(b.dataset.qid)));
+  }
+  function renderToolList() {
+    const list = $('#toolList');
+    if (!list || typeof Tools === 'undefined') return;
+    const favs = getFavs();
+    let items;
+    if (toolCat === 'favs') items = favs.map(id => Tools.get(id)).filter(Boolean);
+    else if (toolCat === 'recent') items = getRecent().map(id => Tools.get(id)).filter(Boolean);
+    else if (toolCat === 'all') items = Tools.list.slice();
+    else items = Tools.byCategory(toolCat);
+    if (toolQuery) {
+      items = items.filter(t =>
+        (t.name + ' ' + (t.desc || '') + ' ' + t.id).toLowerCase().includes(toolQuery)
+      );
+    }
+    if (toolCat !== 'recent') items.sort((a, b) => a.name.localeCompare(b.name));
+    // Favorites first in All
+    if (toolCat === 'all' && !toolQuery) {
+      items.sort((a, b) => {
+        const fa = favs.includes(a.id) ? 0 : 1;
+        const fb = favs.includes(b.id) ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    const countEl = $('#toolCount');
+    if (countEl) countEl.textContent = items.length + ' / ' + Tools.list.length;
+    list.innerHTML = items.map(t => `
+      <button type="button" class="formula-card${favs.includes(t.id) ? ' fav' : ''}" data-tid="${t.id}">
+        <div class="fname">${t.name}</div>
+        <div class="fdesc">${t.desc || ''}</div>
+      </button>`).join('') || '<div class="fdesc">No matching tools</div>';
+    list.querySelectorAll('[data-tid]').forEach(card => {
+      card.addEventListener('click', () => openTool(card.dataset.tid));
+    });
+  }
+  function openTool(id) {
+    activeTool = Tools.get(id);
+    if (!activeTool) return;
+    pushRecent(id);
+    const run = $('#toolRun');
+    if (run) run.hidden = false;
+    $('#toolTitle').textContent = activeTool.name;
+    const favBtn = $('#toolFavBtn');
+    if (favBtn) favBtn.textContent = getFavs().includes(id) ? '★' : '☆';
+    $('#toolFields').innerHTML = (activeTool.fields || []).map(f => `
+      <div class="field">
+        <label>${f.l}</label>
+        <input type="${f.type === 'text' ? 'text' : 'number'}" data-tk="${f.k}" value="${f.d ?? ''}" step="any">
+      </div>`).join('');
+    $('#toolResult').textContent = '';
+    lastToolOut = '';
+    renderToolQuick();
+  }
+  function toggleToolFav() {
+    if (!activeTool) return;
+    let favs = getFavs();
+    if (favs.includes(activeTool.id)) favs = favs.filter(x => x !== activeTool.id);
+    else favs.unshift(activeTool.id);
+    setFavs(favs);
+    const favBtn = $('#toolFavBtn');
+    if (favBtn) favBtn.textContent = favs.includes(activeTool.id) ? '★' : '☆';
+    renderToolList();
+    renderToolQuick();
+    showToast(favs.includes(activeTool.id) ? 'Added to favorites' : 'Removed from favorites');
+  }
+  function runActiveTool() {
+    if (!activeTool) return;
+    const vals = {};
+    $('#toolFields').querySelectorAll('[data-tk]').forEach(inp => {
+      vals[inp.dataset.tk] = inp.type === 'number' ? parseFloat(inp.value) : inp.value;
+    });
+    try {
+      const out = activeTool.run(vals);
+      lastToolOut = String(out);
+      $('#toolResult').textContent = lastToolOut;
+      Storage.addHistory('Tool: ' + activeTool.name, lastToolOut.split('\n')[0]);
+      renderHistory();
+    } catch (e) {
+      lastToolOut = '';
+      $('#toolResult').textContent = 'Error: ' + (e.message || e);
+    }
+  }
+  function sendToolToCalc() {
+    if (!lastToolOut) return showToast('Calculate first');
+    // Prefer first number with $ or plain number in result
+    const m = lastToolOut.replace(/,/g, '').match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
+    if (!m) return showToast('No number found in result');
+    expression = m[0];
+    result = parseFloat(m[0]);
+    resultDisplay = null;
+    lastWasEquals = false;
+    setMode('basic');
+    updateDisplay();
+    showToast('Sent ' + m[0] + ' to calculator');
+  }
+
 
   function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

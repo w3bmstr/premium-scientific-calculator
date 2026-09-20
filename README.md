@@ -1,73 +1,50 @@
 # Lumina — Precision Calculator
 
-Premium scientific, financial, programmer, graphing, and conversion calculator with a luxury glass UI.
-
-![Version](https://img.shields.io/badge/version-1.2-gold)
+Premium multi-mode calculator: scientific, financial, programmer, graphing, conversions, and formula library.
 
 ## Features
 
-- **Basic** — arithmetic, %, memory (MC/MR/M+/M−), ANS, undo/redo
-- **Scientific** — trig (DEG/RAD), hyperbolic, logs, powers, roots, factorial, π, e
-- **Finance** — compound interest, loan, mortgage, ROI, P/L, tax
-- **Programmer** — DEC/HEX/OCT/BIN, AND/OR/XOR/NOT, shifts
-- **Graph** — up to 3 functions, zoom, roots, PNG export
-- **Convert** — length, weight, temp, **live currency**, speed, time
-- **Formulas** — physics, finance, stats, engineering one-taps
-- **Units in expressions** — e.g. `5 km to mi`, `32 f to c`
-- **Notation** — NORM / SCI / ENG / FRAC (fractions)
-- **Physical constants** — c, G, h, and more
-- **Undo/Redo** — full history stack
-- **Export** — history as JSON or CSV
-- **Design** — 12 skins, corners, density, high contrast, notation modes
-- **PWA** — installable, offline cache (serve over HTTPS/localhost)
+- **CAS-style expression line** — editable, undo/redo (`Ctrl+Z` / `Ctrl+Y`), clearer errors  
+- **Scientific** — DEG/RAD, complex `i`, matrices `[[1,2],[3,4]]`, d/dx, simplify, fractions, ENG/SCI  
+- **Units** — e.g. `5 km to mi`, `32 f to c`  
+- **Finance** — loan/mortgage **amortization tables**, balance chart, **Print/PDF** reports  
+- **Graph** — multi-function, **trace**, **roots**, **extrema**, polar mode, PNG export  
+- **Voice input** & **image OCR** (Tesseract CDN)  
+- **Backup / restore** full state as JSON (“sync via file”)  
+- **PWA** — installable, offline cache  
+- **Design** — 12 skins, density, high contrast  
+- **Tools catalog** — 220+ specialized calculators with search, favorites, recent, copy & send-to-calc (finance, health, math, date, home, auto, science, education, business, fun)  
 
-## Quick start
+## Run locally
 
-### Single file
-Open `Lumina-Calculator.html` in any modern browser.
-
-### Full project (PWA)
 ```bash
+# any static server (required for PWA / install)
 npx serve .
 # or
 python3 -m http.server 8080
 ```
-Then open the URL and optionally “Install app”.
 
-## Shortcuts
+Open `http://localhost:8080` → use **Install app** when the browser offers it.
 
-| Key | Action |
-|-----|--------|
-| `Enter` / `=` | Evaluate |
-| `Esc` | All clear |
-| `Backspace` | Delete |
-| `Ctrl/Cmd+Z` | Undo |
-| `Ctrl/Cmd+Y` or `Ctrl/Cmd+Shift+Z` | Redo |
+**Single file:** open `Lumina-Calculator.html` (no server needed for basic use).
+
+## Tests
+
+```bash
+npm i mathjs
+node tests.js
+```
+
+## GitHub Pages
+
+1. Push this folder as the repo root (`lumina-calculator`).  
+2. Settings → Pages → Deploy from `main` / root.  
+3. Visit `https://<user>.github.io/<repo>/` and install as PWA (HTTPS required).
 
 ## Stack
 
-HTML · CSS · JavaScript · [math.js](https://mathjs.org) · [Chart.js](https://www.chartjs.org) · LocalStorage · Frankfurter API (currency)
-
-## Folder structure (flat — no subfolders)
-
-```
-lumina-calculator/
-├── index.html                 # main app (modular)
-├── Lumina-Calculator.html     # all-in-one single file
-├── style.css
-├── calculator.js
-├── scientific.js
-├── financial.js
-├── formulas.js
-├── graph.js
-├── storage.js
-├── manifest.json
-├── sw.js
-├── icon-192.png
-├── icon-512.png
-└── README.md
-```
+HTML, CSS, JS · math.js · Chart.js · Tesseract.js (OCR) · LocalStorage · Frankfurter (FX)
 
 ## License
 
-MIT — use freely.
+MIT
