@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Lumina — Precision Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.0/lib/browser/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app" role="application" aria-label="Lumina Calculator">
+    <!-- Ambient glow -->
+    <div class="ambient"></div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">LUMINA</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        <button class="icon-btn" id="historyToggle" title="History" aria-label="History">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+        </button>
+        <button class="icon-btn" id="menuToggle" title="Modes" aria-label="Modes">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mode tabs -->
+    <nav class="mode-tabs" id="modeTabs">
+      <button class="mode-tab active" data-mode="basic">Basic</button>
+      <button class="mode-tab" data-mode="scientific">Scientific</button>
+      <button class="mode-tab" data-mode="financial">Finance</button>
+      <button class="mode-tab" data-mode="programmer">Programmer</button>
+      <button class="mode-tab" data-mode="graph">Graph</button>
+      <button class="mode-tab" data-mode="convert">Convert</button>
+      <button class="mode-tab" data-mode="formulas">Formulas</button>
+    </nav>
+
+    <!-- Display -->
+    <section class="display glass">
+      <div class="display-meta">
+        <button type="button" class="angle-mode" id="angleMode" style="color:#c45a12;background:#141416;border:1px solid #3d2a18" title="Toggle DEG/RAD">DEG</button>
+        <button type="button" class="notation-badge" id="notationMode" style="color:#c45a12;background:#141416;border:1px solid #3d2a18" title="Toggle notation">NORM</button>
+        <span class="memory-indicator" id="memoryIndicator" hidden>M</span>
+      </div>
+      <div class="expression" id="expression" contenteditable="true" spellcheck="false" inputmode="decimal" aria-label="Expression"></div>
+      <div class="result" id="result" title="Tap to copy" role="status" aria-live="polite">0</div>
+    </section>
+
+    <!-- Main calculator body -->
+    <main class="body">
+      <!-- BASIC / SCIENTIFIC keypad -->
+      <div class="panel active" id="panel-basic">
+        <div class="keypad scientific-keys" id="scientificKeys">
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="sin">sin</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="cos">cos</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="tan">tan</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="log">log</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="ln">ln</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="asin">asin</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="acos">acos</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="atan">atan</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="exp">eˣ</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="fact">n!</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="pow2">x²</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="pow3">x³</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="sqrt">√</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="cbrt">∛</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="pow">xʸ</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-const="pi">π</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-const="e">e</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="inv">1/x</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="abs">|x|</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="percent">%</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="sinh">sinh</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="cosh">cosh</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="tanh">tanh</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="pow10">10ˣ</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="rand">rnd</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="frac">a/b</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-fn="eng">ENG</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="c">c</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="G">G</button>
+          <button class="key fn" style="color:#c45a12;background:#0e0e10;font-weight:700" data-action-const="h">h</button>
+        </div>
+
+        <div class="keypad main-keys">
+          <button class="key util" data-action="mc">MC</button>
+          <button class="key util" data-action="mr">MR</button>
+          <button class="key util" data-action="mplus">M+</button>
+          <button class="key util" data-action="mminus">M−</button>
+
+          <button class="key util" data-action="clear">AC</button>
+          <button class="key util" data-action="ce">CE</button>
+          <button class="key util" data-action="backspace">⌫</button>
+          <button class="key op" data-op="/">÷</button>
+
+          <button class="key util" data-action="paren-l">(</button>
+          <button class="key util" data-action="paren-r">)</button>
+          <button class="key util" data-action="sign">±</button>
+          <button class="key util" data-action="ans">ANS</button>
+
+          <button class="key num" data-num="7">7</button>
+          <button class="key num" data-num="8">8</button>
+          <button class="key num" data-num="9">9</button>
+          <button class="key op" data-op="*">×</button>
+
+          <button class="key num" data-num="4">4</button>
+          <button class="key num" data-num="5">5</button>
+          <button class="key num" data-num="6">6</button>
+          <button class="key op" data-op="-">−</button>
+
+          <button class="key num" data-num="1">1</button>
+          <button class="key num" data-num="2">2</button>
+          <button class="key num" data-num="3">3</button>
+          <button class="key op" data-op="+">+</button>
+
+          <button class="key num" data-num="0">0</button>
+          <button class="key num" data-num=".">.</button>
+          <button class="key util" data-action="copy">⎘</button>
+          <button class="key equals" data-action="equals">=</button>
+        </div>
+      </div>
+
+      <!-- FINANCIAL panel -->
+      <div class="panel" id="panel-financial">
+        <div class="fin-tabs">
+          <button class="fin-tab active" data-fin="compound">Compound</button>
+          <button class="fin-tab" data-fin="loan">Loan</button>
+          <button class="fin-tab" data-fin="mortgage">Mortgage</button>
+          <button class="fin-tab" data-fin="roi">ROI</button>
+          <button class="fin-tab" data-fin="pl">P/L</button>
+          <button class="fin-tab" data-fin="tax">Tax</button>
+        </div>
+
+        <div class="fin-form active" id="fin-compound">
+          <div class="field">
+            <label>Principal ($)</label>
+            <input type="number" id="ci-principal" placeholder="10000" step="any">
+          </div>
+          <div class="field">
+            <label>Annual Rate (%)</label>
+            <input type="number" id="ci-rate" placeholder="5" step="any">
+          </div>
+          <div class="field">
+            <label>Years</label>
+            <input type="number" id="ci-years" placeholder="10" step="any">
+          </div>
+          <div class="field">
+            <label>Compounds / Year</label>
+            <select id="ci-freq">
+              <option value="1">Annually</option>
+              <option value="2">Semi-annually</option>
+              <option value="4" selected>Quarterly</option>
+              <option value="12">Monthly</option>
+              <option value="365">Daily</option>
+            </select>
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="compound">Calculate</button>
+          <div class="fin-result" id="ci-result"></div>
+        </div>
+
+        <div class="fin-form" id="fin-loan">
+          <div class="field">
+            <label>Loan Amount ($)</label>
+            <input type="number" id="loan-amount" placeholder="25000" step="any">
+          </div>
+          <div class="field">
+            <label>Annual Rate (%)</label>
+            <input type="number" id="loan-rate" placeholder="6.5" step="any">
+          </div>
+          <div class="field">
+            <label>Term (Years)</label>
+            <input type="number" id="loan-years" placeholder="5" step="any">
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="loan">Calculate</button>
+          <div class="fin-result" id="loan-result"></div>
+        </div>
+
+        <div class="fin-form" id="fin-mortgage">
+          <div class="field">
+            <label>Home Price ($)</label>
+            <input type="number" id="mtg-price" placeholder="450000" step="any">
+          </div>
+          <div class="field">
+            <label>Down Payment ($)</label>
+            <input type="number" id="mtg-down" placeholder="90000" step="any">
+          </div>
+          <div class="field">
+            <label>Annual Rate (%)</label>
+            <input type="number" id="mtg-rate" placeholder="6.8" step="any">
+          </div>
+          <div class="field">
+            <label>Term (Years)</label>
+            <input type="number" id="mtg-years" placeholder="30" step="any">
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="mortgage">Calculate</button>
+          <div class="fin-result" id="mtg-result"></div>
+        </div>
+
+        <div class="fin-form" id="fin-roi">
+          <div class="field">
+            <label>Initial Investment ($)</label>
+            <input type="number" id="roi-initial" placeholder="10000" step="any">
+          </div>
+          <div class="field">
+            <label>Final Value ($)</label>
+            <input type="number" id="roi-final" placeholder="12500" step="any">
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="roi">Calculate</button>
+          <div class="fin-result" id="roi-result"></div>
+        </div>
+
+        <div class="fin-form" id="fin-pl">
+          <div class="field">
+            <label>Cost / Buy Price ($)</label>
+            <input type="number" id="pl-cost" placeholder="50" step="any">
+          </div>
+          <div class="field">
+            <label>Sell Price ($)</label>
+            <input type="number" id="pl-sell" placeholder="75" step="any">
+          </div>
+          <div class="field">
+            <label>Quantity</label>
+            <input type="number" id="pl-qty" placeholder="100" step="any">
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="pl">Calculate</button>
+          <div class="fin-result" id="pl-result"></div>
+        </div>
+
+        <div class="fin-form" id="fin-tax">
+          <div class="field">
+            <label>Income / Amount ($)</label>
+            <input type="number" id="tax-amount" placeholder="75000" step="any">
+          </div>
+          <div class="field">
+            <label>Tax Rate (%)</label>
+            <input type="number" id="tax-rate" placeholder="22" step="any">
+          </div>
+          <button class="key equals fin-calc" data-fin-calc="tax">Calculate</button>
+          <div class="fin-result" id="tax-result"></div>
+        </div>
+      </div>
+
+      <!-- PROGRAMMER panel -->
+      <div class="panel" id="panel-programmer">
+        <div class="base-tabs">
+          <button class="base-tab active" data-base="dec">DEC</button>
+          <button class="base-tab" data-base="hex">HEX</button>
+          <button class="base-tab" data-base="oct">OCT</button>
+          <button class="base-tab" data-base="bin">BIN</button>
+        </div>
+        <div class="prog-display glass">
+          <div class="prog-row"><span class="base-label">HEX</span><span id="prog-hex">0</span></div>
+          <div class="prog-row"><span class="base-label">DEC</span><span id="prog-dec">0</span></div>
+          <div class="prog-row"><span class="base-label">OCT</span><span id="prog-oct">0</span></div>
+          <div class="prog-row"><span class="base-label">BIN</span><span id="prog-bin">0</span></div>
+        </div>
+        <div class="keypad prog-keys">
+          <button class="key util" data-action="clear">AC</button>
+          <button class="key util" data-action="backspace">⌫</button>
+          <button class="key op" data-bit="AND">AND</button>
+          <button class="key op" data-bit="OR">OR</button>
+          <button class="key op" data-bit="XOR">XOR</button>
+          <button class="key op" data-bit="NOT">NOT</button>
+          <button class="key op" data-bit="LSH">≪</button>
+          <button class="key op" data-bit="RSH">≫</button>
+
+          <button class="key num hex-only" data-num="A">A</button>
+          <button class="key num hex-only" data-num="B">B</button>
+          <button class="key num hex-only" data-num="C">C</button>
+          <button class="key num hex-only" data-num="D">D</button>
+          <button class="key num hex-only" data-num="E">E</button>
+          <button class="key num hex-only" data-num="F">F</button>
+
+          <button class="key num" data-num="7">7</button>
+          <button class="key num" data-num="8">8</button>
+          <button class="key num" data-num="9">9</button>
+          <button class="key num" data-num="4">4</button>
+          <button class="key num" data-num="5">5</button>
+          <button class="key num" data-num="6">6</button>
+          <button class="key num" data-num="1">1</button>
+          <button class="key num" data-num="2">2</button>
+          <button class="key num" data-num="3">3</button>
+          <button class="key num wide" data-num="0">0</button>
+          <button class="key equals" data-action="equals">=</button>
+        </div>
+      </div>
+
+      <!-- GRAPH panel -->
+      <div class="panel" id="panel-graph">
+        <div class="graph-controls">
+          <input type="text" id="graph-fn" placeholder="f1: sin(x)" value="sin(x)">
+          <button class="key equals" id="graph-plot">Plot</button>
+        </div>
+        <div class="graph-controls">
+          <input type="text" id="graph-fn2" placeholder="f2: optional e.g. cos(x)">
+          <input type="text" id="graph-fn3" placeholder="f3: optional">
+        </div>
+        <div class="graph-meta" id="graphMeta"></div>
+        <div class="graph-canvas-wrap glass">
+          <canvas id="graph-canvas"></canvas>
+        </div>
+        <div class="graph-zoom">
+          <button class="key util" id="graph-zoom-in">+</button>
+          <button class="key util" id="graph-zoom-out">−</button>
+          <button class="key util" id="graph-reset">Reset</button>
+          <button class="key util" id="graph-save">Save</button>
+          <button class="key util" id="graph-roots" title="Find roots">Roots</button>
+        </div>
+      </div>
+
+      <!-- CONVERT panel -->
+      <div class="panel" id="panel-convert">
+        <div class="conv-tabs">
+          <button class="conv-tab active" data-conv="length">Length</button>
+          <button class="conv-tab" data-conv="weight">Weight</button>
+          <button class="conv-tab" data-conv="temp">Temp</button>
+          <button class="conv-tab" data-conv="currency">Currency</button>
+          <button class="conv-tab" data-conv="speed">Speed</button>
+          <button class="conv-tab" data-conv="time">Time</button>
+        </div>
+        <div class="conv-body">
+          <div class="field">
+            <label>From</label>
+            <div class="conv-row">
+              <input type="number" id="conv-from-val" value="1" step="any">
+              <select id="conv-from-unit"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>To</label>
+            <div class="conv-row">
+              <input type="number" id="conv-to-val" readonly>
+              <select id="conv-to-unit"></select>
+            </div>
+          </div>
+          <button class="key equals" id="conv-swap">⇅ Swap</button>
+        </div>
+      </div>
+    </main>
+
+
+      <!-- FORMULAS panel -->
+      <div class="panel" id="panel-formulas">
+        <div class="formula-cats" id="formulaCats">
+          <button class="conv-tab active" data-fcat="physics">Physics</button>
+          <button class="conv-tab" data-fcat="finance">Finance</button>
+          <button class="conv-tab" data-fcat="stats">Statistics</button>
+          <button class="conv-tab" data-fcat="engineering">Engineering</button>
+        </div>
+        <div class="formula-list" id="formulaList"></div>
+        <div class="formula-run glass" id="formulaRun" hidden>
+          <div class="formula-title" id="formulaTitle"></div>
+          <div class="formula-fields" id="formulaFields"></div>
+          <button class="key equals fin-calc" id="formulaCalc">Calculate</button>
+          <div class="fin-result" id="formulaResult"></div>
+        </div>
+      </div>
+
+    <!-- History drawer -->
+    <aside class="history-drawer" id="historyDrawer">
+      <div class="history-header">
+        <h3>History</h3>
+        <button class="icon-btn" id="historyClear" title="Clear history">Clear</button>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+    </aside>
+
+    <!-- Menu drawer -->
+    <aside class="menu-drawer" id="menuDrawer">
+      <div class="menu-header">
+        <h3>Menu</h3>
+        <button class="icon-btn" id="menuClose" aria-label="Close menu">✕</button>
+      </div>
+      <nav class="menu-nav">
+        <button class="menu-item" data-menu-mode="basic">
+          <span class="menu-icon">▦</span> Basic
+        </button>
+        <button class="menu-item" data-menu-mode="scientific">
+          <span class="menu-icon">ƒ</span> Scientific
+        </button>
+        <button class="menu-item" data-menu-mode="financial">
+          <span class="menu-icon">$</span> Finance
+        </button>
+        <button class="menu-item" data-menu-mode="programmer">
+          <span class="menu-icon">⟨⟩</span> Programmer
+        </button>
+        <button class="menu-item" data-menu-mode="graph">
+          <span class="menu-icon">∿</span> Graph
+        </button>
+        <button class="menu-item" data-menu-mode="convert">
+          <span class="menu-icon">⇄</span> Convert
+        </button>
+        <button class="menu-item" data-menu-mode="formulas">
+          <span class="menu-icon">∑</span> Formulas
+        </button>
+      </nav>
+      <div class="menu-divider"></div>
+      <div class="menu-section-label">Design</div>
+      <div class="skin-grid" id="skinGrid">
+        <button type="button" class="skin-swatch active" data-skin="lumina" title="Lumina Gold"><span>Gold</span></button>
+        <button type="button" class="skin-swatch" data-skin="obsidian" title="Obsidian"><span>Obsidian</span></button>
+        <button type="button" class="skin-swatch" data-skin="ocean" title="Ocean"><span>Ocean</span></button>
+        <button type="button" class="skin-swatch" data-skin="emerald" title="Emerald"><span>Emerald</span></button>
+        <button type="button" class="skin-swatch" data-skin="rose" title="Rose"><span>Rose</span></button>
+        <button type="button" class="skin-swatch" data-skin="amber" title="Amber"><span>Amber</span></button>
+        <button type="button" class="skin-swatch" data-skin="violet" title="Violet"><span>Violet</span></button>
+        <button type="button" class="skin-swatch" data-skin="neon" title="Neon"><span>Neon</span></button>
+        <button type="button" class="skin-swatch" data-skin="carbon" title="Carbon"><span>Carbon</span></button>
+        <button type="button" class="skin-swatch" data-skin="sunset" title="Sunset"><span>Sunset</span></button>
+        <button type="button" class="skin-swatch" data-skin="paper" title="Paper"><span>Paper</span></button>
+        <button type="button" class="skin-swatch" data-skin="snow" title="Snow"><span>Snow</span></button>
+      </div>
+      <div class="menu-section-label">Display</div>
+      <div class="design-controls">
+        <div class="design-row">
+          <label>Corners</label>
+          <div class="design-toggles" id="optRadius">
+            <button type="button" class="design-chip" data-radius="sharp">Sharp</button>
+            <button type="button" class="design-chip active" data-radius="default">Default</button>
+            <button type="button" class="design-chip" data-radius="soft">Soft</button>
+          </div>
+        </div>
+        <div class="design-row">
+          <label>Density</label>
+          <div class="design-toggles" id="optDensity">
+            <button type="button" class="design-chip active" data-density="comfortable">Comfort</button>
+            <button type="button" class="design-chip" data-density="compact">Compact</button>
+          </div>
+        </div>
+        <div class="design-row">
+          <label>Accessibility</label>
+          <div class="design-toggles">
+            <button type="button" class="design-chip" id="optHighContrast">High contrast</button>
+          </div>
+        </div>
+      </div>
+      <div class="menu-divider"></div>
+      <nav class="menu-nav">
+        <button class="menu-item" id="menuUndo">
+          <span class="menu-icon">↶</span> Undo
+        </button>
+        <button class="menu-item" id="menuRedo">
+          <span class="menu-icon">↷</span> Redo
+        </button>
+        <button class="menu-item" id="menuHistory">
+          <span class="menu-icon">⏱</span> History
+        </button>
+        <button class="menu-item" id="menuExport">
+          <span class="menu-icon">↓</span> Export History (JSON)
+        </button>
+        <button class="menu-item" id="menuExportCsv">
+          <span class="menu-icon">↓</span> Export History (CSV)
+        </button>
+        <button class="menu-item" id="menuClearMem">
+          <span class="menu-icon">✕</span> Clear Memory
+        </button>
+        <button class="menu-item" id="menuSound">
+          <span class="menu-icon">♪</span> Key Sound: Off
+        </button>
+        <button class="menu-item" id="menuHaptic">
+          <span class="menu-icon">◎</span> Haptics: On
+        </button>
+      </nav>
+      <div class="menu-footer">
+        <span class="menu-brand">LUMINA</span>
+        <span class="menu-ver">Precision Calculator v1.1</span>
+      </div>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="formulas.js"></script>
+  <script src="scientific.js"></script>
+  <script src="financial.js"></script>
+  <script src="graph.js"></script>
+  <script src="calculator.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
