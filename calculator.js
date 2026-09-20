@@ -1414,13 +1414,7 @@
       msg = 'Chrome/Edge: menu (⋮) → Cast, save, and share → Install app. Or address bar install icon.';
     }
     showToast(msg);
-    // Longer help in banner
-    const ban = $('#installBanner');
-    if (ban) {
-      ban.hidden = false;
-      const span = ban.querySelector('span');
-      if (span) span.textContent = msg;
-    }
+    // Do not force the banner back if user chose Not now
   }
   function setupPWA() {
     // Register SW early with correct scope
@@ -1480,11 +1474,27 @@
     const btn = $('#installBtn'), dis = $('#installDismiss'), menu = $('#menuInstall');
     if (btn) btn.addEventListener('click', doInstall);
     if (menu) menu.addEventListener('click', doInstall);
-    if (dis) dis.addEventListener('click', () => {
+    if (dis) dis.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       localStorage.setItem('lumina_install_dismiss', '1');
       const ban = $('#installBanner');
-      if (ban) ban.hidden = true;
+      if (ban) {
+        ban.hidden = true;
+        ban.style.display = 'none';
+        ban.setAttribute('hidden', '');
+      }
+      showToast('Install prompt hidden');
     });
+
+    // Honor prior dismiss on load
+    if (localStorage.getItem('lumina_install_dismiss')) {
+      const ban = $('#installBanner');
+      if (ban) {
+        ban.hidden = true;
+        ban.style.display = 'none';
+      }
+    }
   }
 
   // ── Voice ──

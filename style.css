@@ -1598,3 +1598,8 @@ button.notation-badge:hover,
 .tool-chip:hover { color: #e07020; border-color: #c45a12; }
 .tool-chip.fav { color: #e07020; }
 .formula-card.fav .fname::before { content: "★ "; color: #c45a12; }
+
+.install-banner[hidden],
+.install-banner.is-dismissed {
+  display: none !important;
+}
